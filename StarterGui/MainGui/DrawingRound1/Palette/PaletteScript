@@ -1,0 +1,88 @@
+local plr = game.Players.LocalPlayer
+local palette = script.Parent
+local colorSelected = palette.Parent.ColorSelected
+local paletteButtons = palette.PaletteButtons
+local buyExpandedButton = palette.BuyExpandedPalette
+local expandedLockFrame = palette.ExpandedPaletteLock
+local colorsModule = require(game.ReplicatedStorage.ColorsScript)
+local MSS = game:GetService("MarketplaceService")
+
+local currentlySelected = paletteButtons.Color1
+
+
+for i,v in pairs(paletteButtons:GetChildren()) do
+	v.MouseButton1Click:Connect(function()
+		if v.Name == "Color7" or v.Name == "Color8" or v.Name == "Color9" then
+			local userOwnsItem = false
+			pcall(function()
+				if MSS:UserOwnsGamePassAsync(plr.UserId, colorsModule.EXTRA_PALETTE_ID) then
+					userOwnsItem = true
+				else
+					MSS:PromptGamePassPurchase(plr, colorsModule.EXTRA_PALETTE_ID)
+				end
+			end)
+			if userOwnsItem == false then
+				return	
+			end
+		end
+		local color = colorsModule.RGB[v.ColorName.Value]
+		if color ~= nil then
+			currentlySelected.Equipped.Visible = false
+			currentlySelected = v
+			currentlySelected.Equipped.Visible = true
+			colorSelected.Value = color
+		end
+	end)
+end
+
+buyExpandedButton.MouseButton1Click:Connect(function()
+	pcall(function()
+		if not MSS:UserOwnsGamePassAsync(plr.UserId, colorsModule.EXTRA_PALETTE_ID) then
+			MSS:PromptGamePassPurchase(plr, colorsModule.EXTRA_PALETTE_ID)
+		else
+			buyExpandedButton.Visible = false
+			expandedLockFrame.Visible = false
+		end
+	end)
+end)
+
+palette.SetColorPaletteEvent.Event:Connect(function(colors)
+	pcall(function()
+		if MSS:UserOwnsGamePassAsync(plr.UserId, colorsModule.EXTRA_PALETTE_ID) then
+			expandedLockFrame.Visible = false
+			buyExpandedButton.Visible = false
+		else
+			expandedLockFrame.Visible = true
+			buyExpandedButton.Visible = true
+		end
+	end)
+	
+	for i=1,9,1 do
+		local v = paletteButtons["Color"..i]
+		if i <= #colors then
+			v.ColorName.Value = colors[i]
+			v.Equipped.Visible = false
+			local color = colorsModule.RGB[colors[i]]
+			if color then
+				v.BackgroundColor3 = color
+			else
+				v.BackgroundColor3 = Color3.fromRGB(255,255,255)
+			end
+		else
+			v.Equipped.Visible = false
+			v.ColorName.Value = "None"
+			v.BackgroundColor3 = Color3.fromRGB(255,255,255)
+		end
+	end
+	
+	currentlySelected = paletteButtons.Color1
+	local color = colorsModule.RGB[currentlySelected.ColorName.Value]
+	if color then
+		colorSelected.Value = color
+		currentlySelected.Equipped.Visible = true
+	else
+		colorSelected.Value = Color3.fromRGB(0,0,0)
+		currentlySelected.Equipped.Visible = false
+	end
+	
+end)
